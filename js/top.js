@@ -90,7 +90,7 @@ export function createTopView(root, ctx) {
     const rows = shown.map((a, i) => {
       const meta = info.get(a.key);
       const bar = h('div', { class: 'bar-track', tabindex: '0', 'aria-label': `${a.title}: ${formatNumber(a.views)} views` },
-        h('span', { class: 'bar', style: { width: `${Math.max(0.5, (a.views / max) * 100)}%` } }),
+        h('span', { class: 'bar', style: { '--fraction': String(Math.max(0.005, a.views / max)) } }),
         h('span', { class: 'bar-value', text: formatCompact(a.views) }));
       attachTooltip(bar, () => [
         h('strong', { text: formatNumber(a.views) }), ' views',

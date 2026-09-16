@@ -18,6 +18,8 @@ export const MAX_MOBILE_SHARE = 0.95;
 export function exclusionReason(page, siteInfo, shares = {}) {
   if (page.key === siteInfo.mainPageKey) return { code: 'main-page', label: 'Main Page' };
   if (page.key === '-' || page.key === '') return { code: 'not-article', label: 'Not an article' };
+  // Old-style links like "wiki.phtml" are counted as if they were titles on several wikis.
+  if (/\.(php|phtml)$/i.test(page.key)) return { code: 'not-article', label: 'Not an article (old URL format)' };
 
   const colon = page.key.indexOf(':');
   if (colon > 0) {

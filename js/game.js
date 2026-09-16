@@ -227,7 +227,7 @@ export function createPlayView(root, ctx) {
         correct ? 'Correct!' : 'Not quite'),
       h('p', { class: 'result-text' },
         h('strong', { text: bigger.info?.title ?? bigger.title }),
-        ` had ${ratioText(bigger.views, smaller.views)} views as `,
+        ` had ${ratioText(bigger.views, smaller.views)} `,
         h('strong', { text: smaller.info?.title ?? smaller.title }),
         ` (${formatCompact(bigger.views)} vs ${formatCompact(smaller.views)}).`),
       nextButton,

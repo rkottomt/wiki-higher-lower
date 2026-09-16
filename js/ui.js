@@ -15,7 +15,7 @@ export function h(tag, props = {}, ...children) {
     if (name === 'class') el.className = value;
     else if (name === 'text') el.textContent = value;
     else if (name === 'dataset') Object.assign(el.dataset, value);
-    else if (name === 'style') Object.assign(el.style, value);
+    else if (name === 'style') for (const [prop, v] of Object.entries(value)) el.style.setProperty(prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`), v);
     else if (name.startsWith('on') && typeof value === 'function') el.addEventListener(name.slice(2).toLowerCase(), value);
     else el.setAttribute(name, value === true ? '' : value);
   }

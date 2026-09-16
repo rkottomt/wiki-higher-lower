@@ -101,12 +101,12 @@ export function summarize(points) {
   return { total, average: total / points.length, peak };
 }
 
-/** "2.4× more" style comparison text for two positive numbers. */
+/** How the bigger of two view counts compares: "2.4× as many views as" or "5% more views than". */
 export function ratioText(a, b) {
   const hi = Math.max(a, b);
   const lo = Math.min(a, b);
-  if (lo <= 0) return 'infinitely more';
+  if (lo <= 0) return 'more views than';
   const r = hi / lo;
-  if (r < 1.1) return `${Math.round((r - 1) * 100)}% more`;
-  return `${r < 10 ? r.toFixed(1) : formatNumber(r)}× as many`;
+  if (r < 1.1) return `${Math.max(1, Math.round((r - 1) * 100))}% more views than`;
+  return `${r < 10 ? r.toFixed(1) : formatNumber(r)}× as many views as`;
 }

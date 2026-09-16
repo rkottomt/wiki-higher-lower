@@ -78,7 +78,8 @@ export function createCompareView(root, ctx) {
     try {
       const [match] = await resolveTitles(ctx.lang, [typed]);
       if (match.missing) {
-        const suggestion = await getSuggestion(ctx.lang, typed).catch(() => null);
+        let suggestion = await getSuggestion(ctx.lang, typed).catch(() => null);
+        if (suggestion) suggestion = suggestion.charAt(0).toUpperCase() + suggestion.slice(1); // titles start with a capital
         const hint = suggestion && suggestion.toLowerCase() !== typed.toLowerCase()
           ? h('button', { type: 'button', class: 'link-button', onClick: () => { input.value = ''; addArticle(suggestion); } }, `Did you mean “${suggestion}”?`)
           : ' Check the spelling, or pick a suggestion while you type.';
@@ -286,7 +287,7 @@ export function createCompareView(root, ctx) {
               h('th', { scope: 'col', class: 'num' }, `Busiest ${unit}`),
               h('th', { scope: 'col', class: 'num' }, 'Share'))),
             h('tbody', {}, [...stats].sort((a, b) => b.total - a.total).map((s) => h('tr', {},
-              h('th', { scope: 'row' }, h('span', { class: 'line-key', style: { background: colorOf(s) }, 'aria-hidden': 'true' }), s.title),
+              h('th', { scope: 'row' }, h('span', { class: 'row-label' }, h('span', { class: 'line-key', style: { background: colorOf(s) }, 'aria-hidden': 'true' }), s.title)),
               h('td', { class: 'num' }, formatNumber(s.total)),
               h('td', { class: 'num' }, formatNumber(s.average)),
               h('td', { class: 'num' }, s.hasData && s.peak.views > 0

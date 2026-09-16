@@ -18,6 +18,8 @@ test('non-articles are excluded but titles with colons are kept', () => {
   assert.equal(exclusionReason({ key: 'File:WhatsApp.svg' }, siteInfo).code, 'not-article');
   assert.equal(exclusionReason({ key: 'Spider-Man:_No_Way_Home' }, siteInfo), null);
   assert.equal(exclusionReason({ key: 'XXX:_State_of_the_Union' }, siteInfo), null);
+  assert.equal(exclusionReason({ key: 'wiki.phtml' }, siteInfo).code, 'not-article'); // seen on de/es/it/pt
+  assert.equal(exclusionReason({ key: 'PHP' }, siteInfo), null);
 });
 
 test('one-device traffic is flagged as likely bots', () => {

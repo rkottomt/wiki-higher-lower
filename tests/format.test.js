@@ -40,8 +40,9 @@ test('summarize finds the total, average and peak', () => {
 });
 
 test('ratioText describes the gap between two counts', () => {
-  assert.equal(ratioText(240, 100), '2.4× as many');
-  assert.equal(ratioText(100, 104), '4% more');
-  assert.equal(ratioText(5, 0), 'infinitely more');
+  assert.equal(ratioText(240, 100), '2.4× as many views as');
+  assert.equal(ratioText(100, 104), '4% more views than');
+  assert.equal(ratioText(1000, 1001), '1% more views than');
+  assert.equal(ratioText(5, 0), 'more views than');
   assert.equal(formatNumber(1234567.4), '1,234,567');
 });

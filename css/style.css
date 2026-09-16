@@ -608,7 +608,7 @@ main { padding: 20px 0 48px; }
 .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--grid); text-align: left; vertical-align: middle; }
 .data-table thead th { color: var(--ink-2); font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
 .data-table tbody th { font-weight: 600; }
-.data-table tbody th .line-key { margin-right: 8px; }
+.row-label { display: inline-flex; align-items: center; gap: 8px; }
 .data-table tr:last-child > * { border-bottom: 0; }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table-note { margin-top: 10px; color: var(--ink-2); font-size: 0.875rem; }
@@ -684,7 +684,14 @@ main { padding: 20px 0 48px; }
 .top-desc { overflow: hidden; color: var(--ink-2); font-size: 0.8125rem; text-overflow: ellipsis; white-space: nowrap; }
 
 .bar-track { display: flex; align-items: center; gap: 8px; height: 22px; margin-top: 4px; border-radius: 4px; }
-.bar { flex: none; height: 16px; border-radius: 0 4px 4px 0; background: var(--series-1); transition: filter 120ms; }
+.bar {
+  /* The value label sits at the tip, so the longest bar leaves room for it. */
+  flex: 0 0 calc((100% - 64px) * var(--fraction));
+  height: 16px;
+  border-radius: 0 4px 4px 0;
+  background: var(--series-1);
+  transition: filter 120ms;
+}
 .bar-track:hover .bar, .bar-track:focus-visible .bar { filter: brightness(1.12); }
 .bar-value { color: var(--ink-2); font-size: 0.8125rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -699,7 +706,8 @@ main { padding: 20px 0 48px; }
 
 @media (max-width: 760px) {
   .site-header { padding-top: 16px; }
-  .brand-tagline { display: none; }
+  .brand-tagline, .lang-picker > span { display: none; }
+  .brand-name { font-size: 1.125rem; line-height: 1.25; }
   .filters-actions { margin-left: 0; width: 100%; }
   .filters-actions .btn { flex: 1; }
 
