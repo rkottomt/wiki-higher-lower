@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wiki Higher or Lower</title>
+  <meta name="description" content="Guess which Wikipedia article got more views, chart how attention changes over time, and browse each month's most-read articles. Live data from the Wikimedia Pageviews API.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232a78d6'/%3E%3Cpath d='M20 38l12-14 12 14' fill='none' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14"/><path d="M20 27l12-11 12 11M20 37l12 11 12-11"/></svg>
+      <div>
+        <p class="brand-name">Wiki Higher or Lower</p>
+        <p class="brand-tagline">What the world reads on Wikipedia, as a game</p>
+      </div>
+    </div>
+    <label class="lang-picker">
+      <span>Wikipedia</span>
+      <select id="lang" aria-label="Wikipedia language"></select>
+    </label>
+  </header>
+
+  <div class="tabs-row">
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <a class="tab" role="tab" id="tab-play" href="#play" aria-controls="view-play">Play</a>
+    <a class="tab" role="tab" id="tab-compare" href="#compare" aria-controls="view-compare">Compare</a>
+    <a class="tab" role="tab" id="tab-top" href="#top" aria-controls="view-top">Top charts</a>
+  </nav>
+  </div>
+
+  <p id="offline-banner" class="offline-banner" role="status" hidden>
+    You’re offline. New data can’t load until you reconnect.
+  </p>
+
+  <main id="main">
+    <!-- PLAY -->
+    <section id="view-play" class="view" role="tabpanel" aria-labelledby="tab-play">
+      <h1 class="visually-hidden">Play Wiki Higher or Lower</h1>
+      <form id="play-setup" class="filters">
+        <div class="field">
+          <span class="field-label" id="play-month-label">Month</span>
+          <div class="month-picker" role="group" aria-labelledby="play-month-label">
+            <select id="play-month" aria-label="Month" disabled></select>
+            <select id="play-year" aria-label="Year" disabled></select>
+          </div>
+        </div>
+        <fieldset class="field">
+          <legend class="field-label">Difficulty</legend>
+          <div class="segmented">
+            <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
+            <label><input type="radio" name="difficulty" value="normal" checked><span>Normal</span></label>
+            <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+          </div>
+        </fieldset>
+        <div class="filters-actions">
+          <button type="button" id="play-random-month" class="btn btn-secondary">Random month</button>
+          <button type="submit" class="btn btn-primary">New game</button>
+        </div>
+      </form>
+      <div id="play-stage" class="stage"></div>
+    </section>
+
+    <!-- COMPARE -->
+    <section id="view-compare" class="view" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <h1 class="visually-hidden">Compare articles over time</h1>
+      <div class="filters">
+        <fieldset class="field">
+          <legend class="field-label">Time range</legend>
+          <div class="segmented">
+            <label><input type="radio" name="range" value="30d"><span>30 days</span></label>
+            <label><input type="radio" name="range" value="90d" checked><span>90 days</span></label>
+            <label><input type="radio" name="range" value="1y"><span>1 year</span></label>
+            <label><input type="radio" name="range" value="5y"><span>5 years</span></label>
+            <label><input type="radio" name="range" value="all"><span>All time</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="field">
+          <legend class="field-label">Scale</legend>
+          <div class="segmented">
+            <label><input type="radio" name="scale" value="linear" checked><span>Linear</span></label>
+            <label><input type="radio" name="scale" value="log"><span>Log</span></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <form id="compare-form" class="search" autocomplete="off" role="search">
+        <div class="combo">
+          <label for="compare-input" class="visually-hidden">Article title</label>
+          <input id="compare-input" type="text" placeholder="Add an article, e.g. Taylor Swift" spellcheck="false"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="compare-suggestions">
+          <ul id="compare-suggestions" class="suggestions" role="listbox" hidden></ul>
+        </div>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <p id="compare-message" class="inline-message" role="status" hidden></p>
+      <div id="compare-body" class="stage"></div>
+    </section>
+
+    <!-- TOP CHARTS -->
+    <section id="view-top" class="view" role="tabpanel" aria-labelledby="tab-top" hidden>
+      <h1 class="visually-hidden">Most-read articles by month</h1>
+      <div class="filters">
+        <div class="field">
+          <span class="field-label" id="top-month-label">Month</span>
+          <div class="month-picker" role="group" aria-labelledby="top-month-label">
+            <select id="top-month" aria-label="Month" disabled></select>
+            <select id="top-year" aria-label="Year" disabled></select>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="top-show-removed">
+          <span>Show pages filtered out</span>
+        </label>
+      </div>
+      <div id="top-body" class="stage"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Live data from the <a href="https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html">Wikimedia Pageviews API</a>
+      and the <a href="https://www.mediawiki.org/wiki/API:Main_page">MediaWiki API</a>. Views are counted per article per month
+      and exclude known bots. Text and images come from Wikipedia and Wikimedia Commons.
+    </p>
+    <p>Made by Rohit Kottomtharayil for CMU 15-113 · <a href="https://github.com/rkottomt/wiki-higher-lower">Source on GitHub</a></p>
+  </footer>
+</body>
+</html>

@@ -232,11 +232,11 @@ export async function getSuggestion(lang, text) {
  * Short description and thumbnail for up to 50 articles in a single request.
  * @returns {Promise<Map<string, {title, description, thumbnail}>>} keyed by article key
  */
-export async function getPageInfo(lang, keys) {
+export async function getPageInfo(lang, keys, { thumbSize = 640 } = {}) {
   const result = new Map();
   for (let i = 0; i < keys.length; i += 50) {
     const batch = keys.slice(i, i + 50);
-    const data = await cachedJson(actionUrl(lang, { action: 'query', prop: 'pageimages|description', piprop: 'thumbnail', pithumbsize: '640', redirects: '1', titles: batch.join('|') }));
+    const data = await cachedJson(actionUrl(lang, { action: 'query', prop: 'pageimages|description', piprop: 'thumbnail', pithumbsize: String(thumbSize), redirects: '1', titles: batch.join('|') }));
     const q = data.query ?? {};
     const normalized = new Map((q.normalized ?? []).map((n) => [n.from, n.to]));
     const redirects = new Map((q.redirects ?? []).map((r) => [r.from, r.to]));

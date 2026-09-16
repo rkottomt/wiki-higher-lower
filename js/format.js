@@ -48,6 +48,32 @@ export const fullDayLabel = (date) => fullDayFmt.format(date);
 /** First month the pageviews API has data for. */
 export const FIRST_DATA_MONTH = { year: 2015, month: 7 };
 
+/** Time ranges offered on the Compare tab. */
+export const RANGES = {
+  '30d': { label: '30 days', granularity: 'daily', days: 30 },
+  '90d': { label: '90 days', granularity: 'daily', days: 90 },
+  '1y': { label: '1 year', granularity: 'daily', days: 365 },
+  '5y': { label: '5 years', granularity: 'monthly', months: 60 },
+  all: { label: 'All time', granularity: 'monthly', months: null },
+};
+
+/**
+ * Start and end dates for a range. Daily ranges end yesterday (today isn't finished);
+ * monthly ranges end with the last complete month, because a partial month would look
+ * like a sudden drop.
+ */
+export function rangeDates(rangeKey, now = new Date()) {
+  const range = RANGES[rangeKey] ?? RANGES['90d'];
+  if (range.granularity === 'daily') {
+    const end = addDays(startOfDay(now), -1);
+    return { granularity: 'daily', start: addDays(end, -(range.days - 1)), end };
+  }
+  const end = endOfMonth(now.getUTCFullYear(), now.getUTCMonth()); // last day of the previous month
+  const first = utcDate(FIRST_DATA_MONTH.year, FIRST_DATA_MONTH.month);
+  const start = range.months ? addMonths(end, -(range.months - 1)) : first;
+  return { granularity: 'monthly', start: start < first ? first : start, end };
+}
+
 /**
  * The API leaves out days (or months) with zero views, which would make a chart
  * silently skip them. Return one point per step from start to end, using 0 for gaps.
