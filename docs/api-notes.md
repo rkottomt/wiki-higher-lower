@@ -1,7 +1,7 @@
 # API exploration notes
 
-Before writing any app code I called each endpoint with `curl` and read the raw
-JSON. These notes record what came back and the surprises that shaped the code.
+Before writing any app code, each endpoint was called with `curl` and the raw
+JSON was read first. These notes record what came back and the surprises that shaped the code.
 
 No API key is needed for any of these. Wikimedia asks clients to identify
 themselves; `curl` sends a `User-Agent`, and in the browser the page's `Origin`
@@ -56,6 +56,9 @@ Response (trimmed): the 1000 most-viewed pages, already sorted.
   | .xxx | 0.02 | **0.98** |
 
   The app drops articles with desktop share > 0.90 or mobile-web share > 0.95.
+- Found later in browser testing: the German, Spanish, Italian and Portuguese top lists
+  include `wiki.phtml`, an old URL format that isn't an article (the MediaWiki API
+  reports it as `missing`). Titles ending in `.php`/`.phtml` are filtered out too.
 - Asking for a month that has not been published yet returns **404** with the
   message *"The date(s) you used are valid, but we either do not have data for
   those date(s)…"*. The app falls back to the previous month.
