@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Node (only used for running tests)
+node_modules/
+
+# Secrets — this project uses no API key, but never commit one if that changes
+.env
+config.local
+*.key
+
+# Local scratch
+scratch/
+screenshots/
