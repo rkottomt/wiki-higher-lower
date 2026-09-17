@@ -3,6 +3,7 @@
 
 import { getTopPagesByDevice, getSiteInfo, getPageInfo } from './api.js';
 import { buildPool } from './pool.js';
+import { assessArticle, FILTER_REASON, FILTER_NOTE } from './safety.js';
 import { formatNumber, formatCompact, monthLabel, articleUrl } from './format.js';
 import { h, errorPanel, loadingPanel, createMonthPicker, attachTooltip } from './ui.js';
 
@@ -68,9 +69,29 @@ export function createTopView(root, ctx) {
     if (keys.length === 0) return;
     try {
       const info = await getPageInfo(data.lang, keys, { thumbSize: 120 });
-      if (my === token) info.forEach((v, k) => data.info.set(k, v));
+      if (my !== token) return;
+      info.forEach((v, k) => data.info.set(k, v));
+      dropUnsafeArticles();
     } catch {
       /* rows still show titles and numbers */
+    }
+  }
+
+  /**
+   * Second pass of the content filter: page details (description, categories, image
+   * file name) only arrive after the ranking does, so anything explicit that got past
+   * the title check moves into the filtered-out list here.
+   */
+  function dropUnsafeArticles() {
+    const blocked = [];
+    data.articles = data.articles.filter((a) => {
+      const meta = data.info.get(a.key);
+      if (!meta || !assessArticle({ ...a, ...meta }).blocked) return true;
+      blocked.push({ ...a, reason: { code: 'adult', label: FILTER_REASON } });
+      return false;
+    });
+    if (blocked.length) {
+      data.removed = [...data.removed, ...blocked].sort((a, b) => a.rank - b.rank);
     }
   }
 
@@ -131,7 +152,8 @@ export function createTopView(root, ctx) {
         h('h2', { class: 'panel-title' }, 'Filtered out'),
         h('p', { class: 'panel-sub' },
           'These pages were in the raw top 1,000 but aren’t used by the game. Pages where more than 90% of views came from ' +
-          'desktop, or more than 95% from mobile web, are almost always inflated by bots, since real readers use both.')),
+          'desktop, or more than 95% from mobile web, are almost always inflated by bots, since real readers use both. ' +
+          FILTER_NOTE)),
       h('div', { class: 'table-wrap' },
         h('table', { class: 'data-table' },
           h('thead', {}, h('tr', {},

@@ -60,6 +60,7 @@ The raw data turned out to be messier than expected. Here is what the app does a
 | Days with zero views are left out of responses | Fills the gaps with zeros so charts don't skip days |
 | Last month's rankings may not be published yet | Tries last month, then the month before |
 | Old `wiki.phtml` URLs show up as "articles" on some wikis | Filtered out |
+| Wikipedia is not an all-ages image source: articles like "Erection" are in the top 1,000 and carry explicit photographs | A content filter removes adult and graphic articles before anything is shown (see below) |
 
 **Trying to break it.** These were checked with scripted runs in a headless Chromium browser:
 
@@ -71,6 +72,45 @@ The raw data turned out to be messier than expected. Here is what the app does a
 
 Rate limiting (HTTP 429), server errors, and 404 "no data" responses are covered by unit tests with a fake `fetch`, and each shows its own message instead of crashing.
 
+## Keeping explicit content out
+
+Wikipedia is an encyclopedia, not a curated all-ages image source. Articles such as
+"Erection" and "Human penis" genuinely appear in a month's 1,000 most-viewed pages, and
+their lead images are explicit photographs. [`js/safety.js`](js/safety.js) filters them
+out using four signals from Wikipedia's own metadata:
+
+| Signal | Example |
+| --- | --- |
+| Article title | `Erection`, `Pornhub`, `アダルトビデオ` |
+| Short description | "…hardening and enlargement of the penis" |
+| Categories | `Category:Penis`, `Category:Sexual arousal`, `Category:Pornographic film actresses` |
+| Image file name | `A_Erect_human_penis.JPG` |
+
+Any one signal is enough to remove an article. Titles are checked as soon as the ranking
+loads; descriptions, categories, and image file names are checked again once page details
+arrive, and anything caught then is dropped from the game's pool and replaced. Filtered
+articles can't be charted on the Compare tab or suggested in its search box either, and
+they're listed with a reason on the Top charts tab. On English Wikipedia in August 2026
+this removed 11 of the top 1,000 articles.
+
+Two deliberate limits on the filter:
+
+- **Sexual orientation and gender identity are not treated as adult content.** Articles like
+  Bisexuality, Asexuality, Transgender, and LGBTQ history are encyclopedia topics and are
+  left alone. Patterns use word boundaries so they can't match these by accident, and tests
+  check this.
+- **Categories describing what a work is *about* are ignored.** "Films about prostitution in
+  India" is a normal movie poster, and "Anti-pedophile activism" is a journalist's portrait.
+  An earlier version of the filter removed both, which is why that rule exists.
+
+The filter is built from word lists, so it can't be perfect: a filtered article can slip
+through if none of its title, description, categories, or image name says what it is, and
+an innocent article can be removed by an unlucky word. It errs toward removing too much,
+since the game has ~950 other articles to choose from each month.
+
+If something does get through, add its exact title to the `ALWAYS_BLOCK` list at the top of
+[`js/safety.js`](js/safety.js) and it is blocked right away, with no pattern-writing needed.
+
 ## Project structure
 
 ```
@@ -78,6 +118,7 @@ index.html          page layout for the three tabs
 css/style.css       styles, including light and dark mode
 js/api.js           every network request, with error handling and caching
 js/pool.js          filters the top list and picks fair article pairs (pure logic)
+js/safety.js        content filter for adult/graphic articles (pure logic)
 js/format.js        number/date helpers, time ranges, gap filling (pure logic)
 js/chart.js         hand-written SVG line chart and sparklines with hover tooltips
 js/game.js          Play tab
@@ -95,6 +136,7 @@ prompt_log.md       AI tools and key prompts used
 - A "view" is a page load, not a unique person, and it's counted in UTC days.
 - The game only uses articles from that month's top 1,000, so every article in it was very popular that month.
 - The bot filter is a heuristic. It can occasionally remove a real article that was mostly read on one kind of device.
+- The content filter is also a heuristic, and is described above.
 - Article text and images come from Wikipedia and Wikimedia Commons under their respective licenses. Pageview data is released under CC0.
 
 ## AI usage

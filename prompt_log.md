@@ -50,6 +50,22 @@ Claude searched for current options and reported back:
 
 I decided to **stay with Wikipedia**, since it's free, needs no key, and can run live on GitHub Pages.
 
+### 4. Blocking explicit content
+
+> update the website and the project such that there is restrictions on anything that is not
+> appropriate. i just got one comparison that involved a photo of an erect penis for a wikipedia
+> page called "erection". make sure nothing like this shows up again
+
+The game pulled page images straight from Wikipedia with no content check, and "Erection" was
+genuinely one of August 2026's 1,000 most-viewed English articles. Claude added `js/safety.js`,
+which filters on four signals: the title, the short description, the article's categories, and
+the image file name. Rather than assume the filter worked, Claude ran it across the real top
+lists: it caught 11 explicit articles on English
+Wikipedia, but also wrongly removed a film "about prostitution in India", a journalist
+categorized under "Anti-pedophile activism", and the Vin Diesel film *XXX*. Those rules were
+narrowed, and tests now cover both the blocked and the allowed cases, including making sure
+LGBTQ topics are not treated as adult content.
+
 ## Design decisions that came out of the conversation
 
 - **Filtering the top list:** namespace prefixes are fetched from each wiki instead of hard-coded, so
@@ -59,14 +75,16 @@ I decided to **stay with Wikipedia**, since it's free, needs no key, and can run
 - **No chart library:** a small hand-written SVG chart keeps the site dependency-free. Its colors were run
   through a colorblind-safety checker, and every chart has a table showing the same numbers.
 - **Error handling** is centralized in `js/api.js` so every tab shows the same kinds of friendly messages.
+- **Content filtering** leans on Wikipedia's own categories rather than a hand-written list of
+  banned titles, so it keeps working for articles nobody thought to list.
 
 ## How the AI's output was checked
 
 - **Raw API responses were inspected before any code was written,** and endpoints and parameters were checked
   against the Wikimedia docs rather than trusted from memory.
-- **Unit tests** (`npm test`, 18 tests) cover filtering, pair picking, date gap-filling, and API error handling
-  with a fake `fetch`. The first run caught a bad test fixture: the "hard" difficulty test had no articles close
-  enough in views.
+- **Unit tests** (`npm test`, 26 tests) cover article filtering, the content filter, pair picking, date
+  gap-filling, and API error handling with a fake `fetch`. The first run caught a bad test fixture: the "hard"
+  difficulty test had no articles close enough in views.
 - **Browser testing** with headless Chromium played full games, used every Compare feature, switched to German
   Wikipedia, loaded a shared link, and tested on a phone-sized screen in dark mode. It also tried the
   "try to break it" cases: an empty title, a misspelled title, a redirect, too many articles, and going offline
@@ -76,3 +94,5 @@ I decided to **stay with Wikipedia**, since it's free, needs no key, and can run
   - Top-chart bars overflowed on phones.
   - `wiki.phtml` appeared as an "article" on German Wikipedia.
   - A sentence read "5% more views as" instead of "than".
+- **The content filter was measured against live data** in all seven languages instead of being assumed correct,
+  which is how the false positives above were found.

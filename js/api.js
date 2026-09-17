@@ -229,18 +229,51 @@ export async function getSuggestion(lang, text) {
 }
 
 /**
- * Short description and thumbnail for up to 50 articles in a single request.
- * @returns {Promise<Map<string, {title, description, thumbnail}>>} keyed by article key
+ * Run an Action API query, following MediaWiki's "continue" pages so nothing is lost
+ * when a batch returns more data than fits in one response (categories, mainly).
+ */
+async function actionQueryAll(lang, params, { maxRounds = 6 } = {}) {
+  const pages = new Map();
+  const normalized = new Map();
+  const redirects = new Map();
+  let cont = {};
+
+  for (let round = 0; round < maxRounds; round++) {
+    const data = await cachedJson(actionUrl(lang, { ...params, ...cont }));
+    const q = data.query ?? {};
+    for (const n of q.normalized ?? []) normalized.set(n.from, n.to);
+    for (const r of q.redirects ?? []) redirects.set(r.from, r.to);
+    for (const page of q.pages ?? []) {
+      const seen = pages.get(page.title);
+      if (!seen) pages.set(page.title, { ...page });
+      else seen.categories = [...(seen.categories ?? []), ...(page.categories ?? [])];
+    }
+    if (!data.continue) break;
+    cont = data.continue;
+  }
+  return { pages, normalized, redirects };
+}
+
+/**
+ * Short description, thumbnail, and categories for up to 50 articles in one request.
+ * Categories are what the content filter leans on most, so they are fetched with the
+ * rest of the page details rather than in a separate round trip.
+ * @returns {Promise<Map<string, {title, description, thumbnail, categories: string[]}>>} keyed by article key
  */
 export async function getPageInfo(lang, keys, { thumbSize = 640 } = {}) {
   const result = new Map();
   for (let i = 0; i < keys.length; i += 50) {
     const batch = keys.slice(i, i + 50);
-    const data = await cachedJson(actionUrl(lang, { action: 'query', prop: 'pageimages|description', piprop: 'thumbnail', pithumbsize: String(thumbSize), redirects: '1', titles: batch.join('|') }));
-    const q = data.query ?? {};
-    const normalized = new Map((q.normalized ?? []).map((n) => [n.from, n.to]));
-    const redirects = new Map((q.redirects ?? []).map((r) => [r.from, r.to]));
-    const pages = new Map((q.pages ?? []).map((p) => [p.title, p]));
+    const { pages, normalized, redirects } = await actionQueryAll(lang, {
+      action: 'query',
+      prop: 'pageimages|description|categories',
+      piprop: 'thumbnail',
+      pithumbsize: String(thumbSize),
+      clshow: '!hidden',
+      cllimit: 'max',
+      redirects: '1',
+      titles: batch.join('|'),
+    });
     for (const key of batch) {
       const cleaned = normalized.get(key) ?? key;
       const page = pages.get(redirects.get(cleaned) ?? cleaned);
@@ -248,6 +281,7 @@ export async function getPageInfo(lang, keys, { thumbSize = 640 } = {}) {
         title: page?.title ?? titleFromKey(key),
         description: page?.description ?? '',
         thumbnail: page?.thumbnail?.source ?? null,
+        categories: (page?.categories ?? []).map((c) => c.title),
       });
     }
   }

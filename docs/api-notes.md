@@ -144,7 +144,29 @@ Up to 50 titles per request. The `pages` come back in **a different order** than
 requested, and underscores become spaces, so the app matches results by the
 normalized title rather than by position.
 
-## 6. CORS check (can a browser page call these directly?)
+## 6. Categories (used by the content filter)
+
+Adding `prop=categories` to the same page-details request returns the categories
+Wikipedia's editors put an article in, which is the most reliable signal for whether
+an article is safe to show:
+
+```
+GET https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|description|categories&clshow=!hidden&cllimit=max&titles=Erection&origin=*
+→ {"query":{"pages":[{"title":"Erection",
+     "description":"Physiological phenomenon involving the hardening and enlargement of the penis",
+     "thumbnail":{"source":"https://thumb.wikimedia.org/.../A_Erect_human_penis.JPG"},
+     "categories":[{"title":"Category:Andrology"},{"title":"Category:Human penis"},
+                   {"title":"Category:Penile erection"},{"title":"Category:Sexual arousal"}]}]}}
+```
+
+- `clshow=!hidden` skips maintenance categories, which are noise here.
+- Categories can exceed one response. The reply then carries a `continue` object
+  (`{"clcontinue": "4650|Galaxies"}`) that has to be sent back to fetch the rest, so
+  `api.js` follows continuations and merges the pages.
+- A popular article can have 70+ categories (Dolly Parton has 72), so this roughly
+  doubles the size of the page-details response.
+
+## 7. CORS check (can a browser page call these directly?)
 
 | Host | `Access-Control-Allow-Origin` | Preflight (`OPTIONS`) |
 | --- | --- | --- |

@@ -1,6 +1,7 @@
 // The "Compare" tab: chart the pageviews of up to four articles over time.
 
-import { resolveTitles, getSuggestion, searchTitles, getArticleViews } from './api.js';
+import { resolveTitles, getSuggestion, searchTitles, getArticleViews, getPageInfo } from './api.js';
+import { assessArticle } from './safety.js';
 import { h, describeError, errorPanel, loadingPanel } from './ui.js';
 import { renderLineChart } from './chart.js';
 import {
@@ -87,6 +88,7 @@ export function createCompareView(root, ctx) {
       }
       if (match.notArticle) return say(`“${match.title}” isn’t an article, so it has no pageview chart here.`, 'warn');
       if (items.some((i) => i.key === match.key)) return say(`${match.title} is already on the chart.`, 'warn');
+      if (await isFiltered(match)) return say(filteredMessage(match.title), 'warn');
 
       items.push({ key: match.key, title: match.title, slot: freeSlot() });
       input.value = '';
@@ -105,17 +107,37 @@ export function createCompareView(root, ctx) {
     }
   }
 
+  const filteredMessage = (title) =>
+    `“${title}” is filtered out of this site as adult or graphic content, so it can’t be charted here.`;
+
+  /**
+   * Content filter for a resolved article. The title is checked first (no request
+   * needed); otherwise its description and categories are fetched and checked.
+   */
+  async function isFiltered(match) {
+    if (assessArticle({ title: match.title }).blocked) return true;
+    const info = await getPageInfo(ctx.lang, [match.key]).catch(() => null);
+    const meta = info?.get(match.key);
+    return meta ? assessArticle({ title: match.title, ...meta }).blocked : false;
+  }
+
   /** Replace the chart's articles in one request (used by examples and shared links). */
   async function setArticles(titles) {
     closeSuggestions();
     say('Looking up articles…');
     try {
       const matches = await resolveTitles(ctx.lang, titles.slice(0, MAX_ARTICLES));
-      const found = [];
-      for (const m of matches) if (!m.missing && !m.notArticle && !found.some((f) => f.key === m.key)) found.push(m);
-      items = found.map((m, i) => ({ key: m.key, title: m.title, slot: i + 1 }));
+      const usable = [];
+      const filtered = [];
+      for (const m of matches) {
+        if (m.missing || m.notArticle || usable.some((f) => f.key === m.key)) continue;
+        if (await isFiltered(m)) filtered.push(m);
+        else usable.push(m);
+      }
+      items = usable.map((m, i) => ({ key: m.key, title: m.title, slot: i + 1 }));
       const skipped = matches.filter((m) => m.missing).map((m) => `“${m.input}”`);
-      if (skipped.length) say(`Couldn’t find ${skipped.join(', ')} on ${ctx.langName} Wikipedia.`, 'warn');
+      if (filtered.length) say(filteredMessage(filtered.map((m) => m.title).join('”, “')), 'warn');
+      else if (skipped.length) say(`Couldn’t find ${skipped.join(', ')} on ${ctx.langName} Wikipedia.`, 'warn');
       else clearMessage();
       syncHash();
       refresh();
@@ -164,7 +186,9 @@ export function createCompareView(root, ctx) {
     }
   }
 
-  function showSuggestions(results) {
+  function showSuggestions(all) {
+    // Keep filtered articles out of the dropdown so they are never even suggested.
+    const results = all.filter((r) => !assessArticle({ title: r.title, description: r.description }).blocked);
     listbox.replaceChildren(
       ...results.map((r, i) =>
         h('li', { id: `compare-option-${i}`, role: 'option', class: 'suggestion', 'aria-selected': 'false', dataset: { title: r.title } },

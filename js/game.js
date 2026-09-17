@@ -2,6 +2,7 @@
 
 import { getTopPagesByDevice, getSiteInfo, getPageInfo, getArticleViews, ApiError } from './api.js';
 import { buildPool, pickOpponent, pickStart, DIFFICULTIES } from './pool.js';
+import { assessArticle } from './safety.js';
 import { formatNumber, formatCompact, monthLabel, utcDate, endOfMonth, fillSeries, summarize, ratioText, articleUrl, dayLabel } from './format.js';
 import { h, errorPanel, loadingPanel, animateNumber, storage, createMonthPicker, prefersReducedMotion } from './ui.js';
 import { renderLineChart } from './chart.js';
@@ -71,7 +72,7 @@ export function createPlayView(root, ctx) {
           'Guess whether the next article got more or fewer views. One wrong guess ends your streak.'),
         h('ul', { class: 'intro-facts' },
           h('li', {}, 'Articles come live from that month’s 1,000 most-viewed pages'),
-          h('li', {}, 'Bot traffic and non-article pages are filtered out'),
+          h('li', {}, 'Bot traffic, non-article pages, and adult or graphic articles are filtered out'),
           h('li', {}, h('span', {}, 'Keyboard: '), h('kbd', {}, '↑'), ' higher · ', h('kbd', {}, '↓'), ' lower · ', h('kbd', {}, 'Enter'), ' next'),
         ),
         h('button', { type: 'button', class: 'btn btn-primary btn-lg', onClick: startGame }, 'Start playing'),
@@ -91,14 +92,14 @@ export function createPlayView(root, ctx) {
       if (articles.length < 10) throw new ApiError('not-found', 'Not enough articles were found for that month. Try another one.');
 
       const used = new Set();
-      const left = pickStart(articles);
-      used.add(left.key);
-      const right = pickOpponent(articles, left, level, used);
+      const left = await pickSafe(ctx.lang, articles, used, () => pickStart(articles));
+      if (left) used.add(left.key);
+      const right = left && (await pickSafe(ctx.lang, articles, used, () => pickOpponent(articles, left, level, used)));
+      if (!left || !right) throw new ApiError('not-found', 'Not enough articles were found for that month. Try another one.');
       used.add(right.key);
-      await loadInfo(ctx.lang, [left, right]);
       if (my !== token) return;
 
-      game = { lang: ctx.lang, year, month, difficulty: level, articles, used, left, right, next: null, streak: 0, rounds: [], phase: 'guessing', newBest: false };
+      game = { lang: ctx.lang, year, month, difficulty: level, articles, used, left, right, nextPromise: null, streak: 0, rounds: [], phase: 'guessing', newBest: false };
       renderRound();
     } catch (err) {
       if (my === token) stage.replaceChildren(errorPanel(err, startGame));
@@ -115,6 +116,25 @@ export function createPlayView(root, ctx) {
     } catch {
       /* the game still works with titles only */
     }
+  }
+
+  /**
+   * Pick an article and confirm it is safe to show.
+   * pool.js already filtered on titles, but an article's description, categories, and
+   * image file name only arrive with its page details, so anything that gets through
+   * is dropped from this game's pool here and replaced.
+   */
+  async function pickSafe(lang, pool, used, choose) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const candidate = choose();
+      if (!candidate) return null;
+      await loadInfo(lang, [candidate]);
+      if (!assessArticle({ ...candidate, ...(candidate.info ?? {}) }).blocked) return candidate;
+      const at = pool.indexOf(candidate);
+      if (at >= 0) pool.splice(at, 1);
+      used.add(candidate.key);
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------------
@@ -150,12 +170,14 @@ export function createPlayView(root, ctx) {
     game.ui = { leftCard, rightCard, rightViews, result, buttons: [higher, lower] };
     if (!prefersReducedMotion()) rightCard.classList.add('card--enter');
 
-    // While the player thinks, pick and preload the article after this one.
+    // While the player thinks, pick, check, and preload the article after this one.
     const upcoming = new Set(game.used);
-    game.next = pickOpponent(game.articles, right, game.difficulty, upcoming);
-    loadInfo(game.lang, [game.next]).then(() => {
-      if (game?.next?.info?.thumbnail) new Image().src = game.next.info.thumbnail;
-    });
+    game.nextPromise = pickSafe(game.lang, game.articles, upcoming, () => pickOpponent(game.articles, right, game.difficulty, upcoming))
+      .then((next) => {
+        if (next?.info?.thumbnail) new Image().src = next.info.thumbnail;
+        return next;
+      })
+      .catch(() => null);
   }
 
   function card(article, side, body) {
@@ -263,12 +285,12 @@ export function createPlayView(root, ctx) {
   async function nextRound() {
     if (!game) return;
     const my = ++token;
-    const next = game.next ?? pickOpponent(game.articles, game.right, game.difficulty, game.used);
+    const next = (await game.nextPromise) ??
+      (await pickSafe(game.lang, game.articles, game.used, () => pickOpponent(game.articles, game.right, game.difficulty, game.used)));
     if (!next) return renderGameOver({ ranOut: true });
     game.left = game.right;
     game.right = next;
     game.used.add(next.key);
-    await loadInfo(game.lang, [next]);
     if (my === token) renderRound();
   }
 

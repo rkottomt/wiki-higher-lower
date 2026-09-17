@@ -2,6 +2,7 @@
 // fair pairs of articles for the higher-or-lower game. Pure functions, no network.
 
 import { titleFromKey } from './format.js';
+import { assessArticle, FILTER_REASON } from './safety.js';
 
 // Real human interest is split between phones and computers. When nearly all of a
 // page's views come from one device type, it's almost always automated traffic
@@ -28,6 +29,11 @@ export function exclusionReason(page, siteInfo, shares = {}) {
     if (siteInfo.namespacePrefixes.has(prefix)) {
       return { code: 'not-article', label: `Not an article (${titleFromKey(page.key.slice(0, colon))} page)` };
     }
+  }
+  // Adult or graphic articles, judged on the title alone here. Descriptions, categories,
+  // and image file names are checked later, once page details have been loaded.
+  if (assessArticle({ title: titleFromKey(page.key) }).blocked) {
+    return { code: 'adult', label: FILTER_REASON };
   }
   if (shares.desktop !== undefined && shares.desktop > MAX_DESKTOP_SHARE) {
     return { code: 'bot', label: `Likely automated traffic (${Math.round(shares.desktop * 100)}% desktop)` };
