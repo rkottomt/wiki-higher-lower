@@ -104,6 +104,21 @@ test('the noun/adjective distinction keeps ordinary titles out of the filter', (
   }
 });
 
+test('word-stem matching catches variants without hitting place names', () => {
+  for (const title of ['Pornochanchada', 'Pornografia', 'Pornographie', 'Porno']) {
+    assert.equal(isExplicitTitle(title), true, title);
+  }
+  // Two real French communes that a plain "porn" substring match would have removed.
+  for (const title of ['Pornic', 'Pornichet', 'Popcorn']) assert.equal(isExplicitTitle(title), false, title);
+});
+
+test('a disambiguated title is treated like the plain one', () => {
+  // Madonna's "Sex (book)" is a book of nude photography.
+  assert.equal(isExplicitTitle('Sex (book)'), true);
+  assert.equal(isExplicitTitle('Sexo (película)'), true);
+  assert.equal(isExplicitTitle('Sexy (song)'), false);
+});
+
 test('accents and underscores do not let anything through', () => {
   assert.equal(normalizeText('Pornografía_en_España'), 'pornografia en espana');
   assert.equal(isExplicitTitle('Pornografia'), true);

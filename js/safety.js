@@ -56,7 +56,10 @@ const EXPLICIT_TERMS = [
   /\b(penetracion sexual|penetrazione sessuale|penetracao sexual|penetration sexuelle)\b/,
   /\b(excitacion sexual|excitacao sexual|eccitazione sessuale|excitation sexuelle)\b/,
   // Pornography, nudity, and the adult industry
-  /\b(porn|porno|pornography|pornographic|pornografia|pornografie|pornographie|pornografica|hentai|ecchi)\b/,
+  // "porno" plus anything covers pornografia/pornographie/pornochanchada, while the
+  // French towns Pornic and Pornichet are left alone.
+  /\bporn\b|\bporno\w*/,
+  /\b(hentai|ecchi)\b/,
   /\b(erotica|erotic|erotik|erotico|erotismo|eroticism|erotisme)\b/,
   // Nouns for nudity as a topic, not the adjectives: "naked", "nackt", and "desnudo" appear
   // in ordinary titles of books and films ("Nackt unter Wölfen", "The Naked Gun").
@@ -76,7 +79,7 @@ const EXPLICIT_TERMS = [
 // Matched against the article's category names (the "Category:" prefix is stripped first).
 // Categories are the strongest signal, because they come from Wikipedia's own editors.
 const EXPLICIT_CATEGORIES = [
-  /\b(pornography|pornographic|pornografia|pornografie|pornographie|pornografis)/,
+  /\bporn\b|\bporno\w*/,
   /\b(erotica|erotic|erotik|erotismo|erotisme|erotico)/,
   /\b(nudity|nudism|naturism|nacktheit|desnudez|nudite|nudita|nudez)\b/,
   /\b(sexuality|sexualitat|sexualidad|sexualite|sessualita|sexualidade|sexology|sexologia|sexologie)\b/,
@@ -123,7 +126,9 @@ const matchesAny = (patterns, text) => patterns.find((pattern) => pattern.test(t
  */
 export function assessArticle({ title = '', key = '', description = '', categories = [], thumbnail = '' } = {}) {
   const titleText = normalizeText(title || key);
-  if (ALWAYS_BLOCK.has(titleText)) return { blocked: true, signal: 'blocklist' };
+  // "Sex (book)" and "Sexo (película)" are the same topic as "Sex" and "Sexo".
+  const baseTitle = titleText.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (ALWAYS_BLOCK.has(titleText) || ALWAYS_BLOCK.has(baseTitle)) return { blocked: true, signal: 'blocklist' };
   if (matchesAny(EXPLICIT_TERMS, titleText)) return { blocked: true, signal: 'title' };
 
   if (description && matchesAny(EXPLICIT_TERMS, normalizeText(description))) {
