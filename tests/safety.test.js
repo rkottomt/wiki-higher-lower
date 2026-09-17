@@ -75,6 +75,35 @@ test('categories describing what a work is about do not block it', () => {
   assert.equal(blocked({ title: 'Chris Hansen', categories: ['Category:Anti-pedophile activism', 'Category:Child abuse in the United States'] }), false);
 });
 
+test('multi-word explicit titles are blocked in each language', () => {
+  // Real titles taken from the August 2026 top-1,000 lists.
+  for (const title of [
+    'Penetrazione sessuale', 'Sexo anal', 'Lista de posições sexuais', '69 (posição sexual)',
+    'Position sexuelle', 'Relação sexual', 'Penis des Menschen', 'Vulve humaine',
+    '膣性交', '女性器', 'プレステージ (アダルトビデオ)',
+  ]) {
+    assert.equal(isExplicitTitle(title), true, title);
+  }
+});
+
+test('single-word explicit titles are blocked exactly, without hitting longer titles', () => {
+  for (const title of ['Sex', 'Sexo', 'Sexe', 'Sesso']) assert.equal(isExplicitTitle(title), true, title);
+  for (const title of ['Sexo en Nueva York', 'Sex and the City', 'Sex Education (TV series)']) {
+    assert.equal(isExplicitTitle(title), false, title);
+  }
+});
+
+test('the noun/adjective distinction keeps ordinary titles out of the filter', () => {
+  // These were all wrongly blocked by earlier versions of the patterns.
+  for (const title of [
+    'Nackt unter Wölfen', 'The Naked Gun', 'Desnudo bajando una escalera',
+    'Orientamento sessuale', 'Orientation sexuelle', 'Educación sexual',
+    'Obsession (film 2025)', 'Meghan, Duquesa de Sussex', 'Erector spinae muscles',
+  ]) {
+    assert.equal(isExplicitTitle(title), false, title);
+  }
+});
+
 test('accents and underscores do not let anything through', () => {
   assert.equal(normalizeText('Pornografía_en_España'), 'pornografia en espana');
   assert.equal(isExplicitTitle('Pornografia'), true);

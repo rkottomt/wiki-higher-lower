@@ -47,7 +47,14 @@ const EXPLICIT_TERMS = [
   /\b(sexual intercourse|sexual activity|sexual position|sexual positions|sex position|sex positions|oral sex|anal sex|group sex|premarital sex)\b/,
   /\b(masturbation|masturbacion|masturbacao|masturbazione|onanism|orgasm|orgasmo|orgasmus|orgasme|ejaculation|ejakulation|eyaculacion|ejaculacao|eiaculazione)\b/,
   /\b(fellatio|fellation|felacion|felacao|fellazione|cunnilingus|coitus|coito|copulation|sodomy|geschlechtsverkehr)\b/,
-  /\b(rapport sexuel|rapports sexuels|relacion sexual|relaciones sexuales|relacao sexual|rapporto sessuale|atto sessuale)\b/,
+  /\b(rapport sexuel|rapports sexuels|relacion sexual|relaciones sexuales|relacao sexual|rapporto sessuale|atto sessuale|acto sexual|ato sexual)\b/,
+  // Romance languages put the adjective after the noun, so each phrasing is listed.
+  // A bare "sexual"/"sessuale"/"sexuelle" is deliberately not matched: it would also hit
+  // "orientamento sessuale" and "orientation sexuelle", which are identity topics.
+  /\b(sexo|sesso|sexe) (anal|oral|grupal|en grupo|explicito|esplicito)\b/,
+  /\b(posicion sexual|posiciones sexuales|posicao sexual|posicoes sexuais|posizione sessuale|posizioni sessuali|position sexuelle|positions sexuelles)\b/,
+  /\b(penetracion sexual|penetrazione sessuale|penetracao sexual|penetration sexuelle)\b/,
+  /\b(excitacion sexual|excitacao sexual|eccitazione sessuale|excitation sexuelle)\b/,
   // Pornography, nudity, and the adult industry
   /\b(porn|porno|pornography|pornographic|pornografia|pornografie|pornographie|pornografica|hentai|ecchi)\b/,
   /\b(erotica|erotic|erotik|erotico|erotismo|eroticism|erotisme)\b/,
@@ -97,7 +104,11 @@ const CONTEXT_CATEGORY = /(^|\s)about\s|^anti-|^opposition to\s/;
 // An escape hatch: if something explicit ever gets past the checks above, add its exact
 // title here (any language) and it is blocked immediately, no pattern-writing needed.
 const ALWAYS_BLOCK = new Set([
-  // 'Some Article Title',
+  // Titles that are a single explicit word. Matched exactly, so "Sex and the City",
+  // "Sexo en Nueva York", and "Sex Education" are unaffected.
+  'Sex', 'Sexo', 'Sexe', 'Sesso', 'Nudo', 'Sexualidad', 'Sexualité', 'Sessualità', 'Sexualidade', 'Sexualität',
+  // If anything explicit ever gets past the checks below, add its exact title here
+  // (any language) and it is blocked immediately, no pattern-writing needed.
 ].map((t) => normalizeText(t)));
 
 const matchesAny = (patterns, text) => patterns.find((pattern) => pattern.test(text)) ?? null;
